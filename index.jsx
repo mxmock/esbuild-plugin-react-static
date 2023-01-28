@@ -1,31 +1,38 @@
-// main.jsx
-var path = require("path");
-var React = require("react");
-var fs = require("node:fs/promises");
-var ReactDOMServer = require("react-dom/server");
-var { renderToString } = ReactDOMServer;
-var { readFile, writeFile, cp, readdir } = fs;
-var ENVS = { DEV: "development", PROD: "production" };
-var ENV = process.env.NODE_ENV || ENVS.DEV;
-var CURRENT_DIR = process.cwd();
-var stringFilled = (s) => typeof s === "string" && s.length > 0;
-var getIdFromFile = (filePath) => {
+const path = require("path");
+const React = require("react");
+const fs = require("node:fs/promises");
+const ReactDOMServer = require("react-dom/server");
+
+const { renderToString } = ReactDOMServer;
+const { readFile, writeFile, cp, readdir } = fs;
+
+const ENVS = { DEV: "development", PROD: "production" };
+const ENV = process.env.NODE_ENV || ENVS.DEV;
+
+const CURRENT_DIR = process.cwd();
+
+const stringFilled = (s) => typeof s === "string" && s.length > 0;
+
+const getIdFromFile = (filePath) => {
   const fileName = path.basename(filePath, path.extname(filePath));
   const name = fileName.substring(0, fileName.indexOf(".static"));
   return `${name.slice(0, 1).toLowerCase()}${name.slice(1)}`;
 };
-var getComponentHtml = (path2) => {
-  let Component = require(path2);
+
+const getComponentHtml = (path) => {
+  let Component = require(path);
   if (Component.default) Component = Component.default;
-  return renderToString(/* @__PURE__ */ React.createElement(Component, null));
+  return renderToString(<Component />);
 };
-var getInjectedHtml = (component, page, id) => {
+
+const getInjectedHtml = (component, page, id) => {
   const idLocation = page.indexOf(id) + id.length + 2;
   const beforeId = page.substring(0, idLocation);
   const afterId = page.substring(idLocation);
   return `${beforeId}${component}${afterId}`;
 };
-var injectInHtml = async (html, page, id) => {
+
+const injectInHtml = async (html, page, id) => {
   try {
     const final = getInjectedHtml(html, page.content, id);
     await writeFile(page.path, final);
@@ -33,6 +40,7 @@ var injectInHtml = async (html, page, id) => {
     console.log(e.message);
   }
 };
+
 module.exports = (options = {}) => {
   const outDir = stringFilled(options.outDir)
     ? `${CURRENT_DIR}/${options.outDir}`
@@ -40,35 +48,43 @@ module.exports = (options = {}) => {
   const pagesPath = stringFilled(options.pages)
     ? `${CURRENT_DIR}/${options.pages}`
     : null;
+
   let pages = [];
+
   return {
     name: "reactStaticPlugin",
     setup: (build) => {
       build.onStart(async () => {
         try {
           if (!pagesPath) throw new Error(`Must specify a html page`);
+
           await cp(pagesPath, outDir, { recursive: true });
           const files = await readdir(pagesPath);
+
           const pagesPromises = files.map(async (file) => {
             return new Promise((resolve, reject) => {
-              const path2 = `${outDir}/${file}`;
-              readFile(path2, "utf8")
+              const path = `${outDir}/${file}`;
+              readFile(path, "utf8")
                 .then((content) => {
                   if (!content) reject(`Can't read file ${file}`);
-                  resolve({ path: path2, content });
+                  resolve({ path, content });
                 })
                 .catch((e) => reject(e));
             });
           });
+
           pages = await Promise.all(pagesPromises);
         } catch (e) {
           console.log(e.message);
         }
       });
+
       build.onLoad({ filter: /\.static.jsx$/ }, async (args) => {
         const componentPath = args.path;
+
         const html = getComponentHtml(componentPath);
         const id = getIdFromFile(componentPath);
+
         if (ENV === ENVS.PROD) {
           pages.forEach(async (page) => {
             if (page.content.includes(`id="${id}"`)) {
@@ -80,6 +96,7 @@ module.exports = (options = {}) => {
             }
           });
         }
+
         return {
           loader: "jsx",
         };
