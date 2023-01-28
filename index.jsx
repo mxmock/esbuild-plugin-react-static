@@ -88,8 +88,8 @@ module.exports = (options = {}) => {
         if (ENV === ENVS.PROD) {
           pages.forEach(async (page) => {
             if (page.content.includes(`id="${id}"`)) {
-              console.log("component : ", id);
-              console.log("injected in : ", page.path);
+              console.log("component:", id);
+              console.log("injected in:", page.path);
               console.log("---------------------------");
               console.log("---------------------------");
               await injectInHtml(html, page, id);
