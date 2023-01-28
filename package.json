@@ -1,0 +1,38 @@
+{
+  "name": "esbuild-plugin-react-static",
+  "version": "0.1.0",
+  "description": "An esbuild plugin to generate react components html and insert it in a main html file",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mxmock/esbuild-plugin-react-static.git"
+  },
+  "scripts": {
+    "test": "npx babel-node test/esbuild.mjs",
+    "prod": "cross-env NODE_ENV=production npx babel-node test/esbuild.prod.mjs"
+  },
+  "keywords": [
+    "esbuild",
+    "plugin",
+    "react",
+    "html",
+    "static"
+  ],
+  "author": "Ockode",
+  "license": "MIT",
+  "homepage": "https://github.com/mxmock/esbuild-plugin-react-static/blob/main/README.md",
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "cross-env": "7.0.3",
+    "esbuild": "^0.17.3"
+  },
+  "dependencies": {
+    "@babel/core": "^7.20.12",
+    "@babel/node": "^7.20.7",
+    "@babel/preset-env": "^7.20.2",
+    "@babel/preset-react": "^7.18.6"
+  }
+}
