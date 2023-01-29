@@ -79,8 +79,8 @@ module.exports = (options = {}) => {
         if (ENV === ENVS.PROD) {
           pages.forEach((page) => {
             if (page.content.includes(`id="${id}"`)) {
-              console.log("component:", id);
-              console.log("injected in:", page.path);
+              console.log("Component:", id);
+              console.log("Injected in:", page.path);
               console.log("-------------------------------------------");
               console.log("-------------------------------------------");
               page.content = getInjectedHtml(html, page.content, id);
