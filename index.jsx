@@ -32,15 +32,6 @@ const getInjectedHtml = (component, page, id) => {
   return `${beforeId}${component}${afterId}`;
 };
 
-const injectInHtml = async (html, page, id) => {
-  try {
-    const final = getInjectedHtml(html, page.content, id);
-    await writeFile(page.path, final);
-  } catch (e) {
-    console.log(e.message);
-  }
-};
-
 module.exports = (options = {}) => {
   const outDir = stringFilled(options.outDir)
     ? `${CURRENT_DIR}/${options.outDir}`
@@ -79,27 +70,32 @@ module.exports = (options = {}) => {
         }
       });
 
-      build.onLoad({ filter: /\.static.jsx$/ }, async (args) => {
+      build.onLoad({ filter: /\.static.jsx$/ }, (args) => {
         const componentPath = args.path;
 
         const html = getComponentHtml(componentPath);
         const id = getIdFromFile(componentPath);
 
         if (ENV === ENVS.PROD) {
-          pages.forEach(async (page) => {
+          pages.forEach((page) => {
             if (page.content.includes(`id="${id}"`)) {
               console.log("component:", id);
               console.log("injected in:", page.path);
-              console.log("---------------------------");
-              console.log("---------------------------");
-              await injectInHtml(html, page, id);
+              console.log("-------------------------------------------");
+              console.log("-------------------------------------------");
+              page.content = getInjectedHtml(html, page.content, id);
             }
           });
         }
 
-        return {
-          loader: "jsx",
-        };
+        return { loader: "jsx" };
+      });
+
+      build.onEnd(async () => {
+        for (let i = 0; i < pages.length; i++) {
+          const page = pages[i];
+          await writeFile(page.path, page.content);
+        }
       });
     },
   };
