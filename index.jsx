@@ -6,9 +6,6 @@ const ReactDOMServer = require("react-dom/server");
 const { renderToString } = ReactDOMServer;
 const { readFile, writeFile, cp, readdir } = fs;
 
-const ENVS = { DEV: "development", PROD: "production" };
-const ENV = process.env.NODE_ENV || ENVS.DEV;
-
 const CURRENT_DIR = process.cwd();
 
 const stringFilled = (s) => typeof s === "string" && s.length > 0;
@@ -76,17 +73,15 @@ module.exports = (options = {}) => {
         const html = getComponentHtml(componentPath);
         const id = getIdFromFile(componentPath);
 
-        if (ENV === ENVS.PROD) {
-          pages.forEach((page) => {
-            if (page.content.includes(`id="${id}"`)) {
-              console.log("Component:", id);
-              console.log("Injected in:", page.path);
-              console.log("-------------------------------------------");
-              console.log("-------------------------------------------");
-              page.content = getInjectedHtml(html, page.content, id);
-            }
-          });
-        }
+        pages.forEach((page) => {
+          if (page.content.includes(`id="${id}"`)) {
+            console.log("Component:", id);
+            console.log("Injected in:", page.path);
+            console.log("-------------------------------------------");
+            console.log("-------------------------------------------");
+            page.content = getInjectedHtml(html, page.content, id);
+          }
+        });
 
         return { loader: "jsx" };
       });

@@ -1,6 +1,6 @@
 {
   "name": "esbuild-plugin-react-static",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "An esbuild plugin to generate react components html and insert it in a main html file",
   "main": "index.js",
   "repository": {
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "npx babel-node test/esbuild.mjs",
-    "prod": "cross-env NODE_ENV=production npx babel-node test/esbuild.prod.mjs"
+    "prod": "npx babel-node test/esbuild.prod.mjs"
   },
   "keywords": [
     "esbuild",
@@ -26,7 +26,6 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "cross-env": "7.0.3",
     "esbuild": "^0.17.3"
   },
   "dependencies": {
