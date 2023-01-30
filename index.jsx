@@ -44,6 +44,17 @@ const getInjectedHtml = (component, page, idLocation, idSize) => {
   return `${beforeId}${component}${afterId}`;
 };
 
+const getFilesPath = async (dir) => {
+  const dirents = await readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(
+    dirents.map((dirent) => {
+      const res = path.resolve(dir, dirent.name);
+      return dirent.isDirectory() ? getFilesPath(res) : res;
+    })
+  );
+  return Array.prototype.concat(...files);
+};
+
 module.exports = (options = {}) => {
   const outDir = stringFilled(options.outDir)
     ? `${CURRENT_DIR}/${options.outDir}`
@@ -60,17 +71,15 @@ module.exports = (options = {}) => {
       build.onStart(async () => {
         try {
           if (!pagesPath) throw new Error(`Must specify a html page`);
-
           await cp(pagesPath, outDir, { recursive: true });
-          const files = await readdir(pagesPath);
+          const files = await getFilesPath(outDir);
 
           const pagesPromises = files.map(async (file) => {
             return new Promise((resolve, reject) => {
-              const path = `${outDir}/${file}`;
-              readFile(path, "utf8")
+              readFile(file, "utf8")
                 .then((content) => {
                   if (!content) reject(`Can't read file ${file}`);
-                  resolve({ path, content });
+                  resolve({ path: file, content });
                 })
                 .catch((e) => reject(e));
             });

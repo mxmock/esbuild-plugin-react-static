@@ -2,6 +2,7 @@ import React from "react";
 import Header from "./components/Header.static";
 import TodosList from "./components/TodosList.static";
 import ReactDOM, { hydrateRoot } from "react-dom/client";
+import TodoDetails from "./components/TodoDetails.static";
 
 const ENVS = { DEV: "development", PROD: "production" };
 
@@ -41,6 +42,14 @@ const main = () => {
     injectInHtml(
       todosList,
       <TodosList data={getData(todosList, todosListId)} />
+    );
+
+  const todoDetailsId = "todoDetails";
+  const todoDetails = get(todoDetailsId);
+  if (todoDetails)
+    injectInHtml(
+      todoDetails,
+      <TodoDetails data={getData(todoDetails, todoDetailsId)} />
     );
 };
 
