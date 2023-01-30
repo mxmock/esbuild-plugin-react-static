@@ -18,13 +18,30 @@ const injectInHtml = (domEl, component, isStatic = true) => {
   }
 };
 
+const getData = (domEl, id) => {
+  const json = domEl.getAttribute(`data-${id}`);
+  try {
+    const data = JSON.parse(json);
+    return data;
+  } catch (e) {
+    console.error(`Can't parse ${json}`, e.message);
+    return {};
+  }
+};
+
 const main = () => {
   console.log("Environnement:", ENV);
-  const header = get("header");
-  if (header) injectInHtml(header, <Header />);
+  const headerId = "header";
+  const header = get(headerId);
+  if (header) injectInHtml(header, <Header data={getData(header, headerId)} />);
 
-  const todosList = get("todosList");
-  if (todosList) injectInHtml(todosList, <TodosList />);
+  const todosListId = "todosList";
+  const todosList = get(todosListId);
+  if (todosList)
+    injectInHtml(
+      todosList,
+      <TodosList data={getData(todosList, todosListId)} />
+    );
 };
 
 window.addEventListener("load", main);

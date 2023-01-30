@@ -2,7 +2,9 @@ import React from "react";
 import ConnectBtn from "./ConnectBtn";
 import { getRndInteger } from "../utils/random.utils";
 
-const Header = () => {
+const Header = ({ data }) => {
+  const getId = () => data.id;
+
   React.useEffect(() => {
     console.log("Header appear");
   }, []);
@@ -14,6 +16,10 @@ const Header = () => {
         <span suppressHydrationWarning={true}>
           App test version {getRndInteger(1, 100)}
         </span>
+      </div>
+
+      <div>
+        <p>Id data: {getId()}</p>
       </div>
 
       <div>

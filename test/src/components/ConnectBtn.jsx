@@ -3,6 +3,10 @@ import React from "react";
 const ConnectBtn = ({ text }) => {
   const [counter, setCounter] = React.useState(0);
 
+  React.useEffect(() => {
+    console.log("counter:", counter);
+  }, [counter]);
+
   return (
     <>
       <button

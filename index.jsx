@@ -1,6 +1,7 @@
 const path = require("path");
 const React = require("react");
 const fs = require("node:fs/promises");
+const minify = require("html-minifier").minify;
 const ReactDOMServer = require("react-dom/server");
 
 const { renderToString } = ReactDOMServer;
@@ -16,16 +17,30 @@ const getIdFromFile = (filePath) => {
   return `${name.slice(0, 1).toLowerCase()}${name.slice(1)}`;
 };
 
-const getComponentHtml = (path) => {
-  let Component = require(path);
-  if (Component.default) Component = Component.default;
-  return renderToString(<Component />);
+const getComponentData = (content, idLocation, attrData) => {
+  if (!content.includes(attrData)) return {};
+  const dataStartAt = content.indexOf(attrData) + attrData.length + 1;
+  const dataEndAt = idLocation - 2;
+  const data = content.substring(dataStartAt, dataEndAt);
+  try {
+    const parsed = JSON.parse(data);
+    console.log(`${attrData}`, parsed);
+    return parsed;
+  } catch (e) {
+    console.error(`Can't parse ${data} from html:`, e.message);
+    return {};
+  }
 };
 
-const getInjectedHtml = (component, page, id) => {
-  const idLocation = page.indexOf(id) + id.length + 2;
-  const beforeId = page.substring(0, idLocation);
-  const afterId = page.substring(idLocation);
+const getComponentHtml = (path, data) => {
+  let Component = require(path);
+  if (Component.default) Component = Component.default;
+  return renderToString(<Component data={data} />);
+};
+
+const getInjectedHtml = (component, page, idLocation, idSize) => {
+  const beforeId = page.substring(0, idLocation + idSize);
+  const afterId = page.substring(idLocation + idSize);
   return `${beforeId}${component}${afterId}`;
 };
 
@@ -63,25 +78,44 @@ module.exports = (options = {}) => {
 
           pages = await Promise.all(pagesPromises);
         } catch (e) {
-          console.log(e.message);
+          console.error(`Can't read files`, e.message);
         }
       });
 
       build.onLoad({ filter: /\.static.jsx$/ }, (args) => {
         const componentPath = args.path;
 
-        const html = getComponentHtml(componentPath);
         const id = getIdFromFile(componentPath);
+        const attrId = `id="${id}">`;
+        const attrData = `data-${id}=`;
 
-        pages.forEach((page) => {
-          if (page.content.includes(`id="${id}"`)) {
+        for (let i = 0; i < pages.length; i++) {
+          const page = pages[i];
+          const content = minify(page.content, {
+            collapseWhitespace: true,
+            conservativeCollapse: true,
+            // collapseInlineTagWhitespace: true,
+            caseSensitive: true,
+          });
+
+          const hasId = content.includes(attrId);
+
+          if (hasId) {
+            const idLocation = content.indexOf(attrId);
+            const data = getComponentData(content, idLocation, attrData);
+            const html = getComponentHtml(componentPath, data);
+            page.content = getInjectedHtml(
+              html,
+              content,
+              idLocation,
+              attrId.length
+            );
             console.log("Component:", id);
             console.log("Injected in:", page.path);
             console.log("-------------------------------------------");
             console.log("-------------------------------------------");
-            page.content = getInjectedHtml(html, page.content, id);
           }
-        });
+        }
 
         return { loader: "jsx" };
       });

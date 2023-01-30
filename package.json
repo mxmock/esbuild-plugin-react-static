@@ -1,6 +1,6 @@
 {
   "name": "esbuild-plugin-react-static",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "An esbuild plugin to generate react components html and insert it in a main html file",
   "main": "index.js",
   "repository": {
@@ -26,7 +26,8 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "esbuild": "^0.17.3"
+    "esbuild": "^0.17.3",
+    "html-minifier": "^4.0.0"
   },
   "dependencies": {
     "@babel/core": "^7.20.12",
