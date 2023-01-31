@@ -1,23 +1,38 @@
 import React from "react";
+import { useDispatch } from "react-redux";
+import { decrement, increment } from "../redux/counter/counter.slice";
 
 const ConnectBtn = ({ text }) => {
-  const [counter, setCounter] = React.useState(0);
+  const dispatch = useDispatch();
 
-  React.useEffect(() => {
-    console.log("counter:", counter);
-  }, [counter]);
+  const handleIncrement = () => {
+    const action = increment();
+    console.log(action);
+    dispatch(action);
+  };
+
+  const handleDecrement = () => {
+    const action = decrement();
+    console.log(action);
+    dispatch(action);
+  };
 
   return (
     <>
       <button
         type="button"
-        className={"btn"}
-        onClick={() => setCounter(counter + 1)}
+        aria-label="Increment value"
+        onClick={handleIncrement}
       >
-        <p className="text">{text}</p>
+        Increment
       </button>
-
-      <p>Clicked {counter} times</p>
+      <button
+        type="button"
+        aria-label="Decrement value"
+        onClick={handleDecrement}
+      >
+        Decrement
+      </button>
     </>
   );
 };

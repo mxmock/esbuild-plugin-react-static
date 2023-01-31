@@ -32,10 +32,24 @@ const getComponentData = (content, idLocation, attrData) => {
   }
 };
 
-const getComponentHtml = (path, data) => {
+const getComponentHtml = (path, data, suffix, redux) => {
   let Component = require(path);
   if (Component.default) Component = Component.default;
-  return renderToString(<Component data={data} />);
+
+  if (suffix.includes("provider")) {
+    if (redux.store && redux.Provider) {
+      const { store, Provider } = redux;
+      return renderToString(
+        <Provider store={store}>
+          <Component data={data} />
+        </Provider>
+      );
+    } else {
+      throw new Error(`You must provide a store and Provider for ${path}`);
+    }
+  } else {
+    return renderToString(<Component data={data} />);
+  }
 };
 
 const getInjectedHtml = (component, page, idLocation, idSize) => {
@@ -62,6 +76,7 @@ module.exports = (options = {}) => {
   const pagesPath = stringFilled(options.pages)
     ? `${CURRENT_DIR}/${options.pages}`
     : null;
+  const redux = options.redux || { store: null, Provider: null };
 
   let pages = [];
 
@@ -112,7 +127,12 @@ module.exports = (options = {}) => {
           if (hasId) {
             const idLocation = content.indexOf(attrId);
             const data = getComponentData(content, idLocation, attrData);
-            const html = getComponentHtml(componentPath, data);
+            const html = getComponentHtml(
+              componentPath,
+              data,
+              args.suffix,
+              redux
+            );
             page.content = getInjectedHtml(
               html,
               content,

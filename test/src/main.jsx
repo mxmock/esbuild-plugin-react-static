@@ -1,8 +1,10 @@
 import React from "react";
-import Header from "./components/Header.static";
+import Header from "./components/Header.static#provider";
 import TodosList from "./components/TodosList.static";
 import ReactDOM, { hydrateRoot } from "react-dom/client";
-import TodoDetails from "./components/TodoDetails.static";
+import TodoDetails from "./components/TodoDetails.static#provider";
+import { Provider } from "react-redux";
+import store from "./redux/store.js";
 
 const ENVS = { DEV: "development", PROD: "production" };
 
@@ -34,7 +36,13 @@ const main = () => {
   console.log("Environnement:", ENV);
   const headerId = "header";
   const header = get(headerId);
-  if (header) injectInHtml(header, <Header data={getData(header, headerId)} />);
+  if (header)
+    injectInHtml(
+      header,
+      <Provider store={store}>
+        <Header data={getData(header, headerId)} />
+      </Provider>
+    );
 
   const todosListId = "todosList";
   const todosList = get(todosListId);
@@ -49,7 +57,9 @@ const main = () => {
   if (todoDetails)
     injectInHtml(
       todoDetails,
-      <TodoDetails data={getData(todoDetails, todoDetailsId)} />
+      <Provider store={store}>
+        <TodoDetails data={getData(todoDetails, todoDetailsId)} />
+      </Provider>
     );
 };
 
