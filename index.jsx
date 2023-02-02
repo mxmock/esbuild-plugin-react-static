@@ -11,10 +11,55 @@ const CURRENT_DIR = process.cwd();
 
 const stringFilled = (s) => typeof s === "string" && s.length > 0;
 
+const getFilesPath = async (dir) => {
+  const dirents = await readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(
+    dirents.map((dirent) => {
+      const res = path.resolve(dir, dirent.name);
+      return dirent.isDirectory() ? getFilesPath(res) : res;
+    })
+  );
+  return Array.prototype.concat(...files);
+};
+
+const readPages = async (filesPaths) => {
+  let pages = [];
+  try {
+    const pagesPromises = filesPaths.map(async (filePath) => {
+      return new Promise((resolve, reject) => {
+        readFile(filePath, "utf8")
+          .then((c) => {
+            if (!c) reject(`Can't read file ${filePath}`);
+            const content = minify(c, {
+              caseSensitive: true,
+              collapseWhitespace: true,
+              conservativeCollapse: true,
+            });
+            resolve({ path: filePath, content });
+          })
+          .catch((e) => reject(e));
+      });
+    });
+    pages = await Promise.all(pagesPromises);
+  } catch (e) {
+    console.error(`Can't read files`, e.message);
+  } finally {
+    return pages;
+  }
+};
+
 const getIdFromFile = (filePath) => {
   const fileName = path.basename(filePath, path.extname(filePath));
   const name = fileName.substring(0, fileName.indexOf(".static"));
   return `${name.slice(0, 1).toLowerCase()}${name.slice(1)}`;
+};
+
+const getUpdatedPages = (opt) => {
+  const { content, attrData, attrId, componentPath, suffix, redux } = opt;
+  const idLocation = content.indexOf(attrId);
+  const data = getComponentData(content, idLocation, attrData);
+  const html = getComponentHtml(componentPath, data, suffix, redux);
+  return getInjectedHtml(html, content, idLocation, attrId.length);
 };
 
 const getComponentData = (content, idLocation, attrData) => {
@@ -58,17 +103,6 @@ const getInjectedHtml = (component, page, idLocation, idSize) => {
   return `${beforeId}${component}${afterId}`;
 };
 
-const getFilesPath = async (dir) => {
-  const dirents = await readdir(dir, { withFileTypes: true });
-  const files = await Promise.all(
-    dirents.map((dirent) => {
-      const res = path.resolve(dir, dirent.name);
-      return dirent.isDirectory() ? getFilesPath(res) : res;
-    })
-  );
-  return Array.prototype.concat(...files);
-};
-
 module.exports = (options = {}) => {
   const outDir = stringFilled(options.outDir)
     ? `${CURRENT_DIR}/${options.outDir}`
@@ -87,22 +121,10 @@ module.exports = (options = {}) => {
         try {
           if (!pagesPath) throw new Error(`Must specify a html page`);
           await cp(pagesPath, outDir, { recursive: true });
-          const files = await getFilesPath(outDir);
-
-          const pagesPromises = files.map(async (file) => {
-            return new Promise((resolve, reject) => {
-              readFile(file, "utf8")
-                .then((content) => {
-                  if (!content) reject(`Can't read file ${file}`);
-                  resolve({ path: file, content });
-                })
-                .catch((e) => reject(e));
-            });
-          });
-
-          pages = await Promise.all(pagesPromises);
+          const filesPaths = await getFilesPath(outDir);
+          pages = await readPages(filesPaths);
         } catch (e) {
-          console.error(`Can't read files`, e.message);
+          console.error(`Can't get html outputs paths`, e.message);
         }
       });
 
@@ -113,45 +135,29 @@ module.exports = (options = {}) => {
         const attrId = `id="${id}">`;
         const attrData = `data-${id}=`;
 
-        for (let i = 0; i < pages.length; i++) {
-          const page = pages[i];
-          const content = minify(page.content, {
-            collapseWhitespace: true,
-            conservativeCollapse: true,
-            // collapseInlineTagWhitespace: true,
-            caseSensitive: true,
-          });
-
-          const hasId = content.includes(attrId);
-
-          if (hasId) {
-            const idLocation = content.indexOf(attrId);
-            const data = getComponentData(content, idLocation, attrData);
-            const html = getComponentHtml(
-              componentPath,
-              data,
-              args.suffix,
-              redux
-            );
-            page.content = getInjectedHtml(
-              html,
-              content,
-              idLocation,
-              attrId.length
-            );
-            console.log("Component:", id);
-            console.log("Injected in:", page.path);
-            console.log("-------------------------------------------");
-            console.log("-------------------------------------------");
-          }
+        for (const page of pages) {
+          let { content, path } = page;
+          if (!content.includes(attrId)) continue;
+          const opt = {
+            redux,
+            attrId,
+            content,
+            attrData,
+            componentPath,
+            suffix: args.suffix,
+          };
+          page.content = getUpdatedPages(opt);
+          console.log("Component:", id);
+          console.log("Injected in:", path);
+          console.log("-------------------------------------------");
+          console.log("-------------------------------------------");
         }
 
         return { loader: "jsx" };
       });
 
       build.onEnd(async () => {
-        for (let i = 0; i < pages.length; i++) {
-          const page = pages[i];
+        for (const page of pages) {
           await writeFile(page.path, page.content);
         }
       });
