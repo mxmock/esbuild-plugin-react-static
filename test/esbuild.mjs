@@ -1,7 +1,7 @@
 import * as esbuild from "esbuild";
 import { Provider } from "react-redux";
 import store from "./src/redux/store.js";
-import reactStaticPlugin from "../index.js";
+import reactStaticPlugin from "../index.min.js";
 
 const OUT_DIR = "test/build";
 const PAGES_FROM = "test/src/pages";

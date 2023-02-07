@@ -1,8 +1,8 @@
 import * as esbuild from "esbuild";
-import htmlPlugin from "../index.js";
 import { Provider } from "react-redux";
 import store from "./src/redux/store.js";
 import { writeFile } from "node:fs/promises";
+import reactStaticPlugin from "../index.min.js";
 
 const OUT_DIR = "test/prod";
 const PAGES_FROM = "test/src/pages";
@@ -17,7 +17,11 @@ const result = await esbuild.build({
   bundle: true,
   minify: true,
   plugins: [
-    htmlPlugin({ outDir: `${OUT_DIR}/pages`, pages: PAGES_FROM, redux: REDUX }),
+    reactStaticPlugin({
+      outDir: `${OUT_DIR}/pages`,
+      pages: PAGES_FROM,
+      redux: REDUX,
+    }),
   ],
   outdir: `${OUT_DIR}/js`,
   metafile: true,

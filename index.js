@@ -1,1 +1,165 @@
-var p=require("path"),u=require("react"),v=require("node:fs/promises"),x=require("html-minifier").minify,C=require("react-dom/server"),{renderToString:m}=C,{readFile:I,writeFile:F,cp:q,readdir:D}=v,d=process.cwd(),h=t=>typeof t=="string"&&t.length>0,y=async t=>{let r=await D(t,{withFileTypes:!0}),e=await Promise.all(r.map(s=>{let o=p.resolve(t,s.name);return s.isDirectory()?y(o):o}));return Array.prototype.concat(...e)},S=async t=>{let r=[];try{let e=t.map(async s=>new Promise((o,a)=>{I(s,"utf8").then(n=>{n||a(`Can't read file ${s}`);let c=x(n,{caseSensitive:!0,collapseWhitespace:!0,conservativeCollapse:!0});o({path:s,content:c})}).catch(n=>a(n))}));r=await Promise.all(e)}catch(e){console.error("Can't read files",e.message)}finally{return r}},E=t=>{let r=p.basename(t,p.extname(t)),e=r.substring(0,r.indexOf(".static"));return`${e.slice(0,1).toLowerCase()}${e.slice(1)}`},O=t=>{let{content:r,attrData:e,attrId:s,componentPath:o,suffix:a,redux:n}=t,c=r.indexOf(s),i=b(r,c,e),l=j(o,i,a,n);return A(l,r,c,s.length)},b=(t,r,e)=>{if(!t.includes(e))return{};let s=t.indexOf(e)+e.length+1,o=r-2,a=t.substring(s,o);try{let n=JSON.parse(a);return console.log(`${e}`,n),n}catch(n){return console.error(`Can't parse ${a} from html:`,n.message),{}}},j=(t,r,e,s)=>{let o=require(t);if(o.default&&(o=o.default),e.includes("provider"))if(s.store&&s.Provider){let{store:a,Provider:n}=s;return m(u.createElement(n,{store:a},u.createElement(o,{data:r})))}else throw new Error(`You must provide a store and Provider for ${t}`);else return m(u.createElement(o,{data:r}))},A=(t,r,e,s)=>{let o=r.substring(0,e+s),a=r.substring(e+s);return`${o}${t}${a}`};module.exports=(t={})=>{let r=h(t.outDir)?`${d}/${t.outDir}`:`${d}/out`,e=h(t.pages)?`${d}/${t.pages}`:null,s=t.redux||{store:null,Provider:null},o=[];return{name:"reactStaticPlugin",setup:a=>{a.onStart(async()=>{try{if(!e)throw new Error("Must specify a html page");await q(e,r,{recursive:!0});let n=await y(r);o=await S(n)}catch(n){console.error("Can't get html outputs paths",n.message)}}),a.onLoad({filter:/\.static.jsx$/},n=>{let c=n.path,i=E(c),l=`id="${i}">`,$=`data-${i}=`;for(let f of o){let{content:g,path:w}=f;if(!g.includes(l))continue;let P={redux:s,attrId:l,content:g,attrData:$,componentPath:c,suffix:n.suffix};f.content=O(P),console.log("Component:",i),console.log("Injected in:",w),console.log("-------------------------------------------"),console.log("-------------------------------------------")}return{loader:"jsx"}}),a.onEnd(async()=>{for(let n of o)await F(n.path,n.content)})}}};
+import path from "path";
+import React from "react";
+import fs from "node:fs/promises";
+import htmlMinifier from "html-minifier";
+import ReactDOMServer from "react-dom/server";
+
+const { minify } = htmlMinifier;
+const { renderToString } = ReactDOMServer;
+const { readFile, writeFile, cp, readdir } = fs;
+
+const CURRENT_DIR = process.cwd();
+
+const stringFilled = (s) => typeof s === "string" && s.length > 0;
+
+const getFilesPath = async (dir) => {
+  const dirents = await readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(
+    dirents.map((dirent) => {
+      const res = path.resolve(dir, dirent.name);
+      return dirent.isDirectory() ? getFilesPath(res) : res;
+    })
+  );
+  return Array.prototype.concat(...files);
+};
+
+const readPages = async (filesPaths) => {
+  let pages = [];
+  try {
+    const pagesPromises = filesPaths.map(async (filePath) => {
+      return new Promise((resolve, reject) => {
+        readFile(filePath, "utf8")
+          .then((c) => {
+            if (!c) reject(`Can't read file ${filePath}`);
+            const content = minify(c, {
+              caseSensitive: true,
+              collapseWhitespace: true,
+              conservativeCollapse: true,
+            });
+            resolve({ path: filePath, content });
+          })
+          .catch((e) => reject(e));
+      });
+    });
+    pages = await Promise.all(pagesPromises);
+  } catch (e) {
+    console.error(`Can't read files`, e.message);
+  } finally {
+    return pages;
+  }
+};
+
+const getIdFromFile = (filePath) => {
+  const fileName = path.basename(filePath, path.extname(filePath));
+  const name = fileName.substring(0, fileName.indexOf(".static"));
+  return `${name.slice(0, 1).toLowerCase()}${name.slice(1)}`;
+};
+
+const getUpdatedPages = (opt) => {
+  const { content, attrData, attrId, componentPath, suffix, redux } = opt;
+  const idLocation = content.indexOf(attrId);
+  const data = getComponentData(content, idLocation, attrData);
+  const html = getComponentHtml(componentPath, data, suffix, redux);
+  return getInjectedHtml(html, content, idLocation, attrId.length);
+};
+
+const getComponentData = (content, idLocation, attrData) => {
+  if (!content.includes(attrData)) return {};
+  const dataStartAt = content.indexOf(attrData) + attrData.length + 1;
+  const dataEndAt = idLocation - 2;
+  const data = content.substring(dataStartAt, dataEndAt);
+  try {
+    const parsed = JSON.parse(data);
+    console.log(`${attrData}`, parsed);
+    return parsed;
+  } catch (e) {
+    console.error(`Can't parse ${data} from html:`, e.message);
+    return {};
+  }
+};
+
+const getComponentHtml = async (path, data, suffix, redux) => {
+  let Component = await import(path);
+  if (Component.default) Component = Component.default;
+  const reactComponent = React.createElement(Component, { data });
+  if (suffix.includes("provider")) {
+    if (redux.store && redux.Provider) {
+      const { store, Provider } = redux;
+      return renderToString(
+        React.createElement(Provider, { store }, reactComponent)
+      );
+    } else {
+      throw new Error(`You must provide a store and Provider for ${path}`);
+    }
+  } else {
+    return renderToString(reactComponent);
+  }
+};
+
+const getInjectedHtml = (component, page, idLocation, idSize) => {
+  const beforeId = page.substring(0, idLocation + idSize);
+  const afterId = page.substring(idLocation + idSize);
+  return `${beforeId}${component}${afterId}`;
+};
+
+module.exports = (options = {}) => {
+  const outDir = stringFilled(options.outDir)
+    ? `${CURRENT_DIR}/${options.outDir}`
+    : `${CURRENT_DIR}/out`;
+  const pagesPath = stringFilled(options.pages)
+    ? `${CURRENT_DIR}/${options.pages}`
+    : null;
+  const redux = options.redux || { store: null, Provider: null };
+
+  let pages = [];
+
+  return {
+    name: "reactStaticPlugin",
+    setup: (build) => {
+      build.onStart(async () => {
+        try {
+          if (!pagesPath) throw new Error(`Must specify a html page`);
+          await cp(pagesPath, outDir, { recursive: true });
+          const filesPaths = await getFilesPath(outDir);
+          pages = await readPages(filesPaths);
+        } catch (e) {
+          console.error(`Can't get html outputs paths`, e.message);
+        }
+      });
+
+      build.onLoad({ filter: /\.static.jsx$/ }, (args) => {
+        const componentPath = args.path;
+
+        const id = getIdFromFile(componentPath);
+        const attrId = `id="${id}">`;
+        const attrData = `data-${id}=`;
+
+        for (const page of pages) {
+          let { content, path } = page;
+          if (!content.includes(attrId)) continue;
+          const opt = {
+            redux,
+            attrId,
+            content,
+            attrData,
+            componentPath,
+            suffix: args.suffix,
+          };
+          page.content = getUpdatedPages(opt);
+          console.log("Component:", id);
+          console.log("Injected in:", path);
+          console.log("-------------------------------------------");
+          console.log("-------------------------------------------");
+        }
+
+        return { loader: "jsx" };
+      });
+
+      build.onEnd(async () => {
+        for (const page of pages) {
+          await writeFile(page.path, page.content);
+        }
+      });
+    },
+  };
+};

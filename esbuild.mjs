@@ -1,6 +1,6 @@
 import * as esbuild from "esbuild";
 
-const JS_FROM = "index.jsx";
+const JS_FROM = "index.js";
 
 await esbuild.build({
   entryPoints: [JS_FROM],
