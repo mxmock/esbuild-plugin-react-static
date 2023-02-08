@@ -1,8 +1,8 @@
-import path from "path";
-import React from "react";
-import fs from "node:fs/promises";
-import htmlMinifier from "html-minifier";
-import ReactDOMServer from "react-dom/server";
+const path = require("path");
+const React = require("react");
+const fs = require("node:fs/promises");
+const htmlMinifier = require("html-minifier");
+const ReactDOMServer = require("react-dom/server");
 
 const { minify } = htmlMinifier;
 const { renderToString } = ReactDOMServer;
@@ -78,8 +78,8 @@ const getComponentData = (content, idLocation, attrData) => {
   }
 };
 
-const getComponentHtml = async (path, data, suffix, redux) => {
-  let Component = await import(path);
+const getComponentHtml = (path, data, suffix, redux) => {
+  let Component = require(path);
   if (Component.default) Component = Component.default;
   const reactComponent = React.createElement(Component, { data });
   if (suffix.includes("provider")) {

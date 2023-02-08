@@ -12,6 +12,7 @@ An esbuild plugin to generate react components html and insert it in an existing
 - Can use redux to share a store by using the Provider component
 
 
+
 ## Before installation
 
 You must have `esbuild@^0.17.3`, `React@^18.2.0` and `ReactDOM@^18.2.0` installed.
